@@ -15,10 +15,10 @@ test("should parse GET Request line correctly", async () => {
     )
   );
   expect(request).toBeDefined();
-  const requestLine = request.getRequestLine();
-  expect(requestLine.getMethod()).toBe("GET");
-  expect(requestLine.getRequestTarget()).toBe("/");
-  expect(requestLine.getHttpVersion()).toBe("1.1");
+  const requestLine = request.requestLine;
+  expect(requestLine.method).toBe("GET");
+  expect(requestLine.requestTarget).toBe("/");
+  expect(requestLine.httpVersion).toBe("1.1");
 });
 
 test("should parse POST Request line correctly", async () => {
@@ -28,10 +28,10 @@ test("should parse POST Request line correctly", async () => {
     )
   );
   expect(request).toBeDefined();
-  const requestLine = request.getRequestLine();
-  expect(requestLine.getMethod()).toBe("POST");
-  expect(requestLine.getRequestTarget()).toBe("/");
-  expect(requestLine.getHttpVersion()).toBe("1.1");
+  const requestLine = request.requestLine;
+  expect(requestLine.method).toBe("POST");
+  expect(requestLine.requestTarget).toBe("/");
+  expect(requestLine.httpVersion).toBe("1.1");
 });
 
 test("should parse GET Request line with path correctly", async () => {
@@ -41,10 +41,10 @@ test("should parse GET Request line with path correctly", async () => {
     )
   );
   expect(request).toBeDefined();
-  const requestLine = request.getRequestLine();
-  expect(requestLine.getMethod()).toBe("GET");
-  expect(requestLine.getRequestTarget()).toBe("/coffee");
-  expect(requestLine.getHttpVersion()).toBe("1.1");
+  const requestLine = request.requestLine;
+  expect(requestLine.method).toBe("GET");
+  expect(requestLine.requestTarget).toBe("/coffee");
+  expect(requestLine.httpVersion).toBe("1.1");
 });
 
 test("should parse POST Request line with path correctly", async () => {
@@ -55,10 +55,10 @@ test("should parse POST Request line with path correctly", async () => {
   );
 
   expect(request).toBeDefined();
-  const requestLine = request.getRequestLine();
-  expect(requestLine.getMethod()).toBe("POST");
-  expect(requestLine.getRequestTarget()).toBe("/coffee");
-  expect(requestLine.getHttpVersion()).toBe("1.1");
+  const requestLine = request.requestLine;
+  expect(requestLine.method).toBe("POST");
+  expect(requestLine.requestTarget).toBe("/coffee");
+  expect(requestLine.httpVersion).toBe("1.1");
 });
 
 test("should throw MalformedRequestLineError when invalid number of parts in request line", async () => {

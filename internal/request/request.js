@@ -46,15 +46,15 @@ export class RequestLine {
     return input;
   }
 
-  getHttpVersion() {
+  get httpVersion() {
     return this.#httpVersion;
   }
 
-  getRequestTarget() {
+  get requestTarget() {
     return this.#requestTarget;
   }
 
-  getMethod() {
+  get method() {
     return this.#method;
   }
 }
@@ -66,7 +66,7 @@ export class Request {
     this.#requestLine = requestLine;
   }
 
-  getRequestLine() {
+  get requestLine() {
     return this.#requestLine;
   }
 }
