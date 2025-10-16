@@ -24,6 +24,7 @@ export class RequestLine {
    *
    * @param {string} input
    * @returns {string}
+   * @throws {InvalidMethodError}
    */
   static validateHttpMethod(input) {
     if (!this.VALID_HTTP_METHODS.includes(input)) {
@@ -37,6 +38,7 @@ export class RequestLine {
    *
    * @param {string} input
    * @returns {string}
+   * @throws {UnsupportedHttpVersionError}
    */
   static validateHttpVersionString(input) {
     if (input !== "HTTP/1.1") {
@@ -75,11 +77,14 @@ export class Request {
  *
  * @param {string} str
  * @returns {RequestLine}
+ * @throws {MalformedRequestLineError}
+ * @throws {InvalidMethodError}
+ * @throws {UnsupportedHttpVersionError}
  */
 function parseRequestLine(str) {
   const parts = str.split(" ");
 
-  if (parts.length != 3) {
+  if (parts.length !== 3) {
     throw new MalformedRequestLineError();
   }
 
@@ -87,7 +92,7 @@ function parseRequestLine(str) {
   const requestTarget = parts[1];
   const httpVersionString = RequestLine.validateHttpVersionString(parts[2]);
 
-  const [_, httpVersion] = httpVersionString.split("/");
+  const httpVersion = httpVersionString.split("/")[1];
 
   return new RequestLine({ method, requestTarget, httpVersion });
 }
@@ -96,6 +101,9 @@ function parseRequestLine(str) {
  *
  * @param {Readable} stream
  * @returns {Promise<Request>}
+ * @throws {MalformedRequestLineError}
+ * @throws {InvalidMethodError}
+ * @throws {UnsupportedHttpVersionError}
  */
 export async function getRequestFromStream(stream) {
   const input = String((await stream.toArray())[0]);
