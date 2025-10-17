@@ -5,8 +5,6 @@ import {
   UnsupportedHttpVersionError,
 } from "./request.errors";
 
-const SEPARATOR = "\r\n";
-
 export class RequestLine {
   static VALID_HTTP_METHODS = ["GET", "POST"];
 
@@ -63,6 +61,7 @@ export class RequestLine {
 
 export class Request {
   #requestLine;
+  static SEPARATOR = "\r\n";
 
   constructor({ requestLine }) {
     this.#requestLine = requestLine;
@@ -108,7 +107,9 @@ function parseRequestLine(str) {
 export async function getRequestFromStream(stream) {
   const input = String((await stream.toArray())[0]);
 
-  const parts = input.split(SEPARATOR);
+  console.log(input);
+
+  const parts = input.split(Request.SEPARATOR);
 
   const requestLine = parseRequestLine(parts[0]);
 
