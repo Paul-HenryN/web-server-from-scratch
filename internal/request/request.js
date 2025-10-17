@@ -4,7 +4,7 @@ import {
   InvalidMethodError,
   MalformedRequestLineError,
   UnsupportedHttpVersionError,
-} from "./request.errors";
+} from "./request.errors.js";
 
 export class RequestLine {
   static VALID_HTTP_METHODS = ["GET", "POST"];
