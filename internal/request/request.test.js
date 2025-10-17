@@ -1,5 +1,4 @@
 import { test } from "vitest";
-import { getRequestFromStream } from "./request";
 import { Readable } from "stream";
 import { expect } from "vitest";
 import {
@@ -7,6 +6,7 @@ import {
   MalformedRequestLineError,
   UnsupportedHttpVersionError,
 } from "./request.errors";
+import { Request } from "./request";
 
 /**
  * Creates a readable stream that emits data in randomly-sized chunks with delays
@@ -40,7 +40,7 @@ test("should parse GET Request line correctly", async () => {
     "GET / HTTP/1.1\r\nHost: localhost:42069\r\nUser-Agent: curl/7.81.0\r\nAccept: */*\r\n\r\n"
   );
 
-  const request = await getRequestFromStream(stream);
+  const request = await Request.fromStream(stream);
   expect(request).toBeDefined();
   const requestLine = request.requestLine;
   expect(requestLine.method).toBe("GET");
@@ -53,7 +53,7 @@ test("should parse POST Request line correctly", async () => {
     "POST / HTTP/1.1\r\nHost: localhost:42069\r\nUser-Agent: curl/7.81.0\r\nAccept: */*\r\n\r\n",
     20
   );
-  const request = await getRequestFromStream(stream);
+  const request = await Request.fromStream(stream);
   expect(request).toBeDefined();
   const requestLine = request.requestLine;
   expect(requestLine.method).toBe("POST");
@@ -66,7 +66,7 @@ test("should parse GET Request line with path correctly", async () => {
     "GET /coffee HTTP/1.1\r\nHost: localhost:42069\r\nUser-Agent: curl/7.81.0\r\nAccept: */*\r\n\r\n",
     1
   );
-  const request = await getRequestFromStream(stream);
+  const request = await Request.fromStream(stream);
   expect(request).toBeDefined();
   const requestLine = request.requestLine;
   expect(requestLine.method).toBe("GET");
@@ -79,7 +79,7 @@ test("should parse POST Request line with path correctly", async () => {
     "POST /coffee HTTP/1.1\r\nHost: localhost:42069\r\nUser-Agent: curl/7.81.0\r\nAccept: */*\r\n\r\n",
     10
   );
-  const request = await getRequestFromStream(stream);
+  const request = await Request.fromStream(stream);
 
   expect(request).toBeDefined();
   const requestLine = request.requestLine;
@@ -94,7 +94,7 @@ test("should throw MalformedRequestLineError when invalid number of parts in req
     5
   );
 
-  await expect(getRequestFromStream(stream)).rejects.toThrow(
+  await expect(Request.fromStream(stream)).rejects.toThrow(
     MalformedRequestLineError
   );
 });
@@ -105,9 +105,7 @@ test("should throw InvalidHttpMethod when method is invalid", async () => {
     8
   );
 
-  await expect(getRequestFromStream(stream)).rejects.toThrow(
-    InvalidMethodError
-  );
+  await expect(Request.fromStream(stream)).rejects.toThrow(InvalidMethodError);
 });
 
 test("should throw UnsupportedHttpVersion when http version is not supported", async () => {
@@ -116,7 +114,7 @@ test("should throw UnsupportedHttpVersion when http version is not supported", a
     16
   );
 
-  await expect(getRequestFromStream(stream)).rejects.toThrow(
+  await expect(Request.fromStream(stream)).rejects.toThrow(
     UnsupportedHttpVersionError
   );
 });

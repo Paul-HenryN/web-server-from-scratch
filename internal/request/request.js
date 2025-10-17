@@ -58,6 +58,37 @@ export class RequestLine {
   get method() {
     return this.#method;
   }
+
+  /**
+   * Parses a requestLine from a string input.
+   * The input might be an incomplete HTTP request line
+   * @param {string} input
+   * @returns {?RequestLine} Returns RequestLine if complete, null if incomplete
+   * @throws {MalformedRequestLineError}
+   * @throws {InvalidMethodError}
+   * @throws {UnsupportedHttpVersionError}
+   */
+  static from(input) {
+    const lineTerminatorIdx = input.indexOf(Request.SEPARATOR);
+
+    if (lineTerminatorIdx === -1) {
+      return null;
+    }
+
+    const requestLineStr = input.slice(0, lineTerminatorIdx);
+    const parts = requestLineStr.split(" ");
+
+    if (parts.length !== 3) {
+      throw new MalformedRequestLineError();
+    }
+
+    const method = RequestLine.validateHttpMethod(parts[0]);
+    const requestTarget = parts[1];
+    const httpVersionString = RequestLine.validateHttpVersionString(parts[2]);
+    const httpVersion = httpVersionString.split("/")[1];
+
+    return new RequestLine({ method, requestTarget, httpVersion });
+  }
 }
 
 export class Request {
@@ -96,79 +127,50 @@ export class Request {
       throw new Error("Unknown state");
     }
 
-    const requestLine = parseRequestLine(data);
+    const requestLine = RequestLine.from(data);
 
     if (requestLine) {
       this.#requestLine = requestLine;
       this.#state = Request.RequestState.DONE;
     }
   }
-}
 
-/**
- * @param {string} input
- * @returns {?RequestLine} Returns RequestLine if complete, null if incomplete
- * @throws {MalformedRequestLineError}
- * @throws {InvalidMethodError}
- * @throws {UnsupportedHttpVersionError}
- */
-function parseRequestLine(input) {
-  const lineTerminatorIdx = input.indexOf(Request.SEPARATOR);
+  /**
+   *
+   * @param {Readable} stream
+   * @returns {Promise<Request>}
+   * @throws {MalformedRequestLineError}
+   * @throws {InvalidMethodError}
+   * @throws {UnsupportedHttpVersionError}
+   * @throws {EndOfStreamError}
+   */
+  static async fromStream(stream) {
+    let buffer = "";
+    const request = new Request();
 
-  if (lineTerminatorIdx === -1) {
-    return null;
-  }
+    return new Promise((resolve, reject) => {
+      stream.on("data", (chunk) => {
+        buffer += chunk.toString();
 
-  const requestLineStr = input.slice(0, lineTerminatorIdx);
-  const parts = requestLineStr.split(" ");
+        try {
+          request.parse(buffer);
 
-  if (parts.length !== 3) {
-    throw new MalformedRequestLineError();
-  }
-
-  const method = RequestLine.validateHttpMethod(parts[0]);
-  const requestTarget = parts[1];
-  const httpVersionString = RequestLine.validateHttpVersionString(parts[2]);
-  const httpVersion = httpVersionString.split("/")[1];
-
-  return new RequestLine({ method, requestTarget, httpVersion });
-}
-
-/**
- *
- * @param {Readable} stream
- * @returns {Promise<Request>}
- * @throws {MalformedRequestLineError}
- * @throws {InvalidMethodError}
- * @throws {UnsupportedHttpVersionError}
- * @throws {EndOfStreamError}
- */
-export async function getRequestFromStream(stream) {
-  let buffer = "";
-  const request = new Request();
-
-  return new Promise((resolve, reject) => {
-    stream.on("data", (chunk) => {
-      buffer += chunk.toString();
-
-      try {
-        request.parse(buffer);
-
-        if (request.state === Request.RequestState.DONE) {
-          stream.destroy();
-          resolve(request);
+          if (request.state === Request.RequestState.DONE) {
+            stream.destroy();
+            resolve(request);
+          }
+        } catch (e) {
+          reject(e);
         }
-      } catch (e) {
-        reject(e);
-      }
-    });
+      });
 
-    stream.on("end", () => {
-      if (request.state !== Request.RequestState.DONE) {
-        reject(new EndOfStreamError());
-      }
-    });
+      stream.on("end", () => {
+        if (request.state !== Request.RequestState.DONE) {
+          reject(new EndOfStreamError());
+        }
+      });
 
-    stream.on("error", reject);
-  });
+      stream.on("error", reject);
+    });
+  }
 }
