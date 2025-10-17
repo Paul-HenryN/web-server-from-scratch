@@ -1,5 +1,6 @@
 import { Readable } from "stream";
 import {
+  EndOfStreamError,
   InvalidMethodError,
   MalformedRequestLineError,
   UnsupportedHttpVersionError,
@@ -60,28 +61,66 @@ export class RequestLine {
 }
 
 export class Request {
-  #requestLine;
   static SEPARATOR = "\r\n";
 
-  constructor({ requestLine }) {
+  static RequestState = Object.freeze({
+    INIT: Symbol("init"),
+    DONE: Symbol("done"),
+  });
+
+  #requestLine;
+  #state;
+
+  constructor({ requestLine } = { requestLine: null }) {
     this.#requestLine = requestLine;
+    this.#state = Request.RequestState.INIT;
   }
 
   get requestLine() {
     return this.#requestLine;
   }
+
+  get state() {
+    return this.#state;
+  }
+
+  /**
+   *
+   * @param {string} data
+   * @returns
+   */
+  parse(data) {
+    if (this.state === Request.RequestState.DONE) {
+      throw new Error("Trying to read in done state");
+    } else if (this.state !== Request.RequestState.INIT) {
+      throw new Error("Unknown state");
+    }
+
+    const requestLine = parseRequestLine(data);
+
+    if (requestLine) {
+      this.#requestLine = requestLine;
+      this.#state = Request.RequestState.DONE;
+    }
+  }
 }
 
 /**
- *
- * @param {string} str
- * @returns {RequestLine}
+ * @param {string} input
+ * @returns {?RequestLine} Returns RequestLine if complete, null if incomplete
  * @throws {MalformedRequestLineError}
  * @throws {InvalidMethodError}
  * @throws {UnsupportedHttpVersionError}
  */
-function parseRequestLine(str) {
-  const parts = str.split(" ");
+function parseRequestLine(input) {
+  const lineTerminatorIdx = input.indexOf(Request.SEPARATOR);
+
+  if (lineTerminatorIdx === -1) {
+    return null;
+  }
+
+  const requestLineStr = input.slice(0, lineTerminatorIdx);
+  const parts = requestLineStr.split(" ");
 
   if (parts.length !== 3) {
     throw new MalformedRequestLineError();
@@ -90,7 +129,6 @@ function parseRequestLine(str) {
   const method = RequestLine.validateHttpMethod(parts[0]);
   const requestTarget = parts[1];
   const httpVersionString = RequestLine.validateHttpVersionString(parts[2]);
-
   const httpVersion = httpVersionString.split("/")[1];
 
   return new RequestLine({ method, requestTarget, httpVersion });
@@ -103,17 +141,34 @@ function parseRequestLine(str) {
  * @throws {MalformedRequestLineError}
  * @throws {InvalidMethodError}
  * @throws {UnsupportedHttpVersionError}
+ * @throws {EndOfStreamError}
  */
 export async function getRequestFromStream(stream) {
-  const input = String((await stream.toArray())[0]);
+  let buffer = "";
+  const request = new Request();
 
-  console.log(input);
+  return new Promise((resolve, reject) => {
+    stream.on("data", (chunk) => {
+      buffer += chunk.toString();
 
-  const parts = input.split(Request.SEPARATOR);
+      try {
+        request.parse(buffer);
 
-  const requestLine = parseRequestLine(parts[0]);
+        if (request.state === Request.RequestState.DONE) {
+          stream.destroy();
+          resolve(request);
+        }
+      } catch (e) {
+        reject(e);
+      }
+    });
 
-  return new Request({
-    requestLine,
+    stream.on("end", () => {
+      if (request.state !== Request.RequestState.DONE) {
+        reject(new EndOfStreamError());
+      }
+    });
+
+    stream.on("error", reject);
   });
 }

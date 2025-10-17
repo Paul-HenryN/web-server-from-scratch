@@ -15,3 +15,9 @@ export class UnsupportedHttpVersionError extends Error {
     super(`Unsupported http version: ${version}`);
   }
 }
+
+export class EndOfStreamError extends Error {
+  constructor() {
+    super("Stream ended before request completed");
+  }
+}
