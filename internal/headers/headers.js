@@ -46,7 +46,7 @@ export class Headers {
       const headerValue = line.slice(delimiterIdx + 1).trim();
 
       this.set(headerName, headerValue);
-      charsRead += lineTerminatorIdx + Request.SEPARATOR.length;
+      charsRead = lineTerminatorIdx + Request.SEPARATOR.length;
     }
 
     return { charsRead, done };
