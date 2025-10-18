@@ -46,8 +46,9 @@ export class Headers {
         throw new MalformedHeadersError();
       }
 
-      let headerName = line.slice(0, delimiterIdx).trimStart().toLowerCase();
-      headerName = this.validateHeaderName(headerName);
+      let headerName = this.validateHeaderName(
+        line.slice(0, delimiterIdx).trimStart()
+      );
 
       const headerValue = line.slice(delimiterIdx + 1).trim();
 
@@ -65,6 +66,10 @@ export class Headers {
    * @throws {InvalidHeaderNameError}
    */
   validateHeaderName(input) {
+    if (input.length === 0) {
+      throw new InvalidHeaderNameError();
+    }
+
     const regex = /^[A-Za-z0-9!#$%&'*+\-.^_`|~]+$/;
 
     if (!regex.test(input)) {
@@ -91,6 +96,6 @@ export class Headers {
    * @param {string} value
    */
   set(key, value) {
-    this.#headersObj[key] = value;
+    this.#headersObj[key.toLowerCase()] = value;
   }
 }

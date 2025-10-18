@@ -5,7 +5,7 @@ export class MalformedHeadersError extends Error {
 }
 
 export class InvalidHeaderNameError extends Error {
-  constructor(headerName) {
+  constructor(headerName = "") {
     super(`Invalid header name: ${headerName}`);
   }
 }
