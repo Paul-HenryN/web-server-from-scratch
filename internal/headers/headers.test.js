@@ -1,7 +1,10 @@
 import { test } from "vitest";
 import { Headers } from "./headers.js";
 import { expect } from "vitest";
-import { MalformedHeadersError } from "./headers.errors.js";
+import {
+  InvalidHeaderNameError,
+  MalformedHeadersError,
+} from "./headers.errors.js";
 
 test("Should parse single header correctly", () => {
   const headers = new Headers();
@@ -53,4 +56,33 @@ test("Should not be done for incomplete inputs", () => {
 
   const { done: done2 } = headers.parse("Host: localh");
   expect(done2).toBe(false);
+});
+
+test("Header names should be case insensitive", () => {
+  const headers = new Headers();
+
+  headers.parse(
+    "Host: localhost:42069\r\nContent-Type: application/json\r\n\r\n"
+  );
+
+  expect(headers.get("host")).toBe("localhost:42069");
+  expect(headers.get("Host")).toBe("localhost:42069");
+  expect(headers.get("HoSt")).toBe("localhost:42069");
+  expect(headers.get("HOST")).toBe("localhost:42069");
+
+  expect(headers.get("content-type")).toBe("application/json");
+  expect(headers.get("Content-Type")).toBe("application/json");
+  expect(headers.get("Content-type")).toBe("application/json");
+  expect(headers.get("Content-Type")).toBe("application/json");
+});
+
+test("should throw an InvalidHeaderNameError when header name is invalid", () => {
+  const headers = new Headers();
+
+  expect(() => headers.parse("H©st: localhost:42069\r\n\r\n")).toThrow(
+    InvalidHeaderNameError
+  );
+  expect(() => headers.parse(": localhost:42069\r\n\r\n")).toThrow(
+    InvalidHeaderNameError
+  );
 });

@@ -1,4 +1,7 @@
-import { MalformedHeadersError } from "./headers.errors";
+import {
+  InvalidHeaderNameError,
+  MalformedHeadersError,
+} from "./headers.errors";
 import { Request } from "../request/request.js";
 
 export class Headers {
@@ -43,7 +46,9 @@ export class Headers {
         throw new MalformedHeadersError();
       }
 
-      const headerName = line.slice(0, delimiterIdx).trimStart();
+      let headerName = line.slice(0, delimiterIdx).trimStart().toLowerCase();
+      headerName = this.validateHeaderName(headerName);
+
       const headerValue = line.slice(delimiterIdx + 1).trim();
 
       this.set(headerName, headerValue);
@@ -54,13 +59,29 @@ export class Headers {
   }
 
   /**
+   *
+   * @param {string} input
+   * @returns {string}
+   * @throws {InvalidHeaderNameError}
+   */
+  validateHeaderName(input) {
+    const regex = /^[A-Za-z0-9!#$%&'*+\-.^_`|~]+$/;
+
+    if (!regex.test(input)) {
+      throw new InvalidHeaderNameError(input);
+    }
+
+    return input;
+  }
+
+  /**
    * Returns the header value associated with
    * a particular key
    * @param {string} key
    * @returns {string}
    */
   get(key) {
-    return this.#headersObj[key];
+    return this.#headersObj[key.toLowerCase()];
   }
 
   /**
