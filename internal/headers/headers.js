@@ -28,6 +28,7 @@ export class Headers {
 
       if (lineTerminatorIdx === charsRead) {
         done = true;
+        charsRead = lineTerminatorIdx + Request.SEPARATOR.length;
         break;
       }
 

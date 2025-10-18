@@ -9,7 +9,7 @@ test("Should parse single header correctly", () => {
   const { charsRead, done } = headers.parse("Host: localhost:42069\r\n\r\n");
 
   expect(headers.get("Host")).toBe("localhost:42069");
-  expect(charsRead).toBe(23);
+  expect(charsRead).toBe(25);
   expect(done).toBe(true);
 });
 
@@ -21,7 +21,7 @@ test("Should parse single header with valid extra spaces correctly", () => {
   );
 
   expect(headers.get("Host")).toBe("localhost:42069");
-  expect(charsRead).toBe(34);
+  expect(charsRead).toBe(36);
   expect(done).toBe(true);
 });
 
