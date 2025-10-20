@@ -5,6 +5,7 @@ import {
   MalformedRequestLineError,
   UnsupportedHttpVersionError,
 } from "./request.errors.js";
+import { Headers } from "../headers/headers.js";
 
 export class RequestLine {
   static VALID_HTTP_METHODS = ["GET", "POST"];
@@ -60,10 +61,15 @@ export class RequestLine {
   }
 
   /**
+   * @typedef RequestLineParseResponse
+   * @property {?RequestLine} requestLine
+   * @property {number} charsRead
+   *
+   *
    * Parses a requestLine from a string input.
    * The input might be an incomplete HTTP request line
    * @param {string} input
-   * @returns {?RequestLine} Returns RequestLine if complete, null if incomplete
+   * @returns {RequestLineParseResponse}
    * @throws {MalformedRequestLineError}
    * @throws {InvalidMethodError}
    * @throws {UnsupportedHttpVersionError}
@@ -72,7 +78,7 @@ export class RequestLine {
     const lineTerminatorIdx = input.indexOf(Request.SEPARATOR);
 
     if (lineTerminatorIdx === -1) {
-      return null;
+      return { requestLine: null, charsRead: 0 };
     }
 
     const requestLineStr = input.slice(0, lineTerminatorIdx);
@@ -87,7 +93,10 @@ export class RequestLine {
     const httpVersionString = RequestLine.validateHttpVersionString(parts[2]);
     const httpVersion = httpVersionString.split("/")[1];
 
-    return new RequestLine({ method, requestTarget, httpVersion });
+    return {
+      requestLine: new RequestLine({ method, requestTarget, httpVersion }),
+      charsRead: lineTerminatorIdx + Request.SEPARATOR.length,
+    };
   }
 }
 
@@ -96,14 +105,17 @@ export class Request {
 
   static RequestState = Object.freeze({
     INIT: Symbol("init"),
+    REQUEST_LINE_PARSED: Symbol("request_line_parsed"),
     DONE: Symbol("done"),
   });
 
   #requestLine;
+  #headers;
   #state;
 
   constructor({ requestLine } = { requestLine: null }) {
     this.#requestLine = requestLine;
+    this.#headers = new Headers();
     this.#state = Request.RequestState.INIT;
   }
 
@@ -115,23 +127,40 @@ export class Request {
     return this.#state;
   }
 
+  get headers() {
+    return this.#headers;
+  }
+
   /**
    *
    * @param {string} data
-   * @returns
+   * @returns {number} The number of chars consumed from input
    */
   parse(data) {
-    if (this.state === Request.RequestState.DONE) {
-      throw new Error("Trying to read in done state");
-    } else if (this.state !== Request.RequestState.INIT) {
-      throw new Error("Unknown state");
-    }
+    switch (this.state) {
+      case Request.RequestState.INIT:
+        const { requestLine, charsRead: charsReadFromRequestLine } =
+          RequestLine.from(data);
 
-    const requestLine = RequestLine.from(data);
+        if (requestLine) {
+          this.#requestLine = requestLine;
+          this.#state = Request.RequestState.REQUEST_LINE_PARSED;
+        }
 
-    if (requestLine) {
-      this.#requestLine = requestLine;
-      this.#state = Request.RequestState.DONE;
+        return charsReadFromRequestLine;
+      case Request.RequestState.REQUEST_LINE_PARSED:
+        const { headers, charsRead: charsReadFromHeader } = Headers.from(data);
+
+        if (headers) {
+          this.#headers = headers;
+          this.#state = Request.RequestState.DONE;
+        }
+
+        return charsReadFromHeader;
+      case Request.RequestState.DONE:
+        throw new Error("Trying to read in done state");
+      default:
+        throw new Error("Unknown state");
     }
   }
 
@@ -146,6 +175,8 @@ export class Request {
    */
   static async fromStream(stream) {
     let buffer = "";
+    let totalCharsRead = 0;
+
     const request = new Request();
 
     return new Promise((resolve, reject) => {
@@ -153,11 +184,16 @@ export class Request {
         buffer += chunk.toString();
 
         try {
-          request.parse(buffer);
+          let charsRead;
 
-          if (request.state === Request.RequestState.DONE) {
-            stream.destroy();
-            resolve(request);
+          while (charsRead !== 0) {
+            if (request.state === Request.RequestState.DONE) {
+              stream.destroy();
+              resolve(request);
+            }
+
+            charsRead = request.parse(buffer.slice(totalCharsRead));
+            totalCharsRead += charsRead;
           }
         } catch (e) {
           reject(e);

@@ -7,6 +7,12 @@ tcpServer.on("connection", async (socket) => {
   console.log(
     `Request Line:\n- Method: ${request.requestLine.method}\n- Target: ${request.requestLine.requestTarget}\n- Version: ${request.requestLine.httpVersion}`
   );
+
+  console.log("Headers:");
+
+  request.headers.forEach(([key, value]) => {
+    console.log(`- ${key}: ${value}`);
+  });
 });
 
 tcpServer.listen(8080);

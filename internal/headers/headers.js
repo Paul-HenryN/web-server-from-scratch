@@ -1,11 +1,32 @@
 import {
   InvalidHeaderNameError,
   MalformedHeadersError,
-} from "./headers.errors";
+} from "./headers.errors.js";
 import { Request } from "../request/request.js";
 
 export class Headers {
   #headersObj = {};
+
+  /**
+   * @typedef ParseHeadersResponse
+   * @property {?Headers} headers
+   * @property {number} charsRead
+   *
+   * @param {string} input
+   * @returns {ParseHeadersResponse}
+   * @throws {MalformedHeadersError}
+   * @throws {InvalidHeaderNameError}
+   */
+  static from(input) {
+    const headers = new Headers();
+    const { done, charsRead } = headers.parse(input);
+
+    if (done) {
+      return { headers, charsRead };
+    }
+
+    return { headers: null, charsRead: 0 };
+  }
 
   /**
    * @typedef ParseResponse
@@ -17,6 +38,7 @@ export class Headers {
    * @param {string} input
    * @returns {ParseResponse}
    * @throws {MalformedHeadersError}
+   * @throws {InvalidHeaderNameError}
    */
   parse(input) {
     let charsRead = 0;
@@ -103,5 +125,13 @@ export class Headers {
     } else {
       this.#headersObj[headerName] = value;
     }
+  }
+
+  /**
+   *
+   * @param {([key, value]: [string, string]) => void} callbackFn
+   */
+  forEach(callbackFn) {
+    Object.entries(this.#headersObj).forEach(callbackFn);
   }
 }
