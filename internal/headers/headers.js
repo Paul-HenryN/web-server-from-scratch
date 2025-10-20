@@ -46,7 +46,7 @@ export class Headers {
         throw new MalformedHeadersError();
       }
 
-      let headerName = this.validateHeaderName(
+      let headerName = Headers.validateHeaderName(
         line.slice(0, delimiterIdx).trimStart()
       );
 
@@ -65,7 +65,7 @@ export class Headers {
    * @returns {string}
    * @throws {InvalidHeaderNameError}
    */
-  validateHeaderName(input) {
+  static validateHeaderName(input) {
     if (input.length === 0) {
       throw new InvalidHeaderNameError();
     }
@@ -96,6 +96,12 @@ export class Headers {
    * @param {string} value
    */
   set(key, value) {
-    this.#headersObj[key.toLowerCase()] = value;
+    const headerName = key.toLowerCase();
+
+    if (headerName in this.#headersObj) {
+      this.#headersObj[headerName] += `,${value}`;
+    } else {
+      this.#headersObj[headerName] = value;
+    }
   }
 }

@@ -40,6 +40,16 @@ test("Should parse 2 headers correctly", () => {
   expect(done).toBe(true);
 });
 
+test("Should parse correctly with preexisting header", () => {
+  const headers = new Headers();
+
+  headers.parse("Host: localhost:42069\r\n\r\n");
+  headers.parse("Content-Type: application/json\r\n\r\n");
+
+  expect(headers.get("Host")).toBe("localhost:42069");
+  expect(headers.get("Content-Type")).toBe("application/json");
+});
+
 test("Should throw MalformedHeadersError when there's an extra space after header name", () => {
   const headers = new Headers();
 
@@ -85,4 +95,12 @@ test("should throw an InvalidHeaderNameError when header name is invalid", () =>
   expect(() => headers.parse(": localhost:42069\r\n\r\n")).toThrow(
     InvalidHeaderNameError
   );
+});
+
+test("should correctly parse multiple values for the same header name", () => {
+  const headers = new Headers();
+
+  headers.parse("My-Header: value1\r\nMy-Header: value2\r\n\r\n");
+
+  expect(headers.get("My-Header")).toBe("value1,value2");
 });
