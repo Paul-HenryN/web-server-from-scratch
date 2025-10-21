@@ -129,6 +129,15 @@ export class Headers {
 
   /**
    *
+   * @param {string} key
+   * @returns {boolean}
+   */
+  has(key) {
+    return key.toLowerCase() in this.#headersObj;
+  }
+
+  /**
+   *
    * @param {([key, value]: [string, string]) => void} callbackFn
    */
   forEach(callbackFn) {

@@ -187,3 +187,89 @@ describe("Headers parsing", () => {
     expect(request.state).toBe(Request.RequestState.DONE);
   });
 });
+
+describe("Body parsing", () => {
+  test("should parse body correctly", async () => {
+    const stream = createChunkedStream(
+      "POST /submit HTTP/1.1\r\n" +
+        "Host: localhost:42069\r\n" +
+        "Content-Length: 13\r\n" +
+        "\r\n" +
+        "hello world!\n",
+      3
+    );
+
+    const request = await Request.fromStream(stream);
+
+    expect(request.body).toBeDefined();
+    expect(request.body).toBe("hello world!\n");
+  });
+
+  test("should throw error when body is shorter than indicated in headers", async () => {
+    const stream = createChunkedStream(
+      "POST /submit HTTP/1.1\r\n" +
+        "Host: localhost:42069\r\n" +
+        "Content-Length: 20\r\n" +
+        "\r\n" +
+        "partial content",
+      3
+    );
+
+    await expect(Request.fromStream(stream)).rejects.toThrow();
+  });
+
+  test("should throw error when body is longer than indicated in headers", async () => {
+    const stream = createChunkedStream(
+      "POST /submit HTTP/1.1\r\n" +
+        "Host: localhost:42069\r\n" +
+        "Content-Length: 5\r\n" +
+        "\r\n" +
+        "partial content",
+      5
+    );
+
+    await expect(Request.fromStream(stream)).rejects.toThrow();
+  });
+
+  test("should parse correctly when body is empty and content-length is 0", async () => {
+    const stream = createChunkedStream(
+      "POST /submit HTTP/1.1\r\n" +
+        "Host: localhost:42069\r\n" +
+        "Content-Length: 0\r\n" +
+        "\r\n",
+      3
+    );
+
+    const request = await Request.fromStream(stream);
+
+    expect(request.body).toBeDefined();
+    expect(request.body).toBe("");
+  });
+
+  test("should parse correctly when body is empty and content-length is absent", async () => {
+    const stream = createChunkedStream(
+      "POST /submit HTTP/1.1\r\n" + "Host: localhost:42069\r\n\r\n",
+      3
+    );
+
+    const request = await Request.fromStream(stream);
+
+    expect(request.body).toBeDefined();
+    expect(request.body).toBe("");
+  });
+
+  test("should ignore body when content-length is absent", async () => {
+    const stream = createChunkedStream(
+      "POST /submit HTTP/1.1\r\n" +
+        "Host: localhost:42069\r\n" +
+        "\r\n" +
+        "partial content",
+      3
+    );
+
+    const request = await Request.fromStream(stream);
+
+    expect(request.body).toBeDefined();
+    expect(request.body).toBe("");
+  });
+});

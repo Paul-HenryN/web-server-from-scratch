@@ -21,3 +21,9 @@ export class EndOfStreamError extends Error {
     super("Stream ended before request completed");
   }
 }
+
+export class InvalidBodyError extends Error {
+  constructor(message = null) {
+    super(message);
+  }
+}

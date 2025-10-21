@@ -1,6 +1,7 @@
 import { Readable } from "stream";
 import {
   EndOfStreamError,
+  InvalidBodyError,
   InvalidMethodError,
   MalformedRequestLineError,
   UnsupportedHttpVersionError,
@@ -105,18 +106,21 @@ export class Request {
 
   static RequestState = Object.freeze({
     INIT: Symbol("init"),
-    REQUEST_LINE_PARSED: Symbol("request_line_parsed"),
+    PARSING_HEADERS: Symbol("parsing_headers"),
+    PARSING_BODY: Symbol("parsing_body"),
     DONE: Symbol("done"),
   });
 
   #requestLine;
   #headers;
+  #body;
   #state;
 
   constructor({ requestLine } = { requestLine: null }) {
     this.#requestLine = requestLine;
     this.#headers = new Headers();
     this.#state = Request.RequestState.INIT;
+    this.#body = null;
   }
 
   get requestLine() {
@@ -129,6 +133,10 @@ export class Request {
 
   get headers() {
     return this.#headers;
+  }
+
+  get body() {
+    return this.#body;
   }
 
   /**
@@ -144,19 +152,45 @@ export class Request {
 
         if (requestLine) {
           this.#requestLine = requestLine;
-          this.#state = Request.RequestState.REQUEST_LINE_PARSED;
+          this.#state = Request.RequestState.PARSING_HEADERS;
         }
 
         return charsReadFromRequestLine;
-      case Request.RequestState.REQUEST_LINE_PARSED:
+      case Request.RequestState.PARSING_HEADERS:
         const { headers, charsRead: charsReadFromHeader } = Headers.from(data);
 
         if (headers) {
           this.#headers = headers;
-          this.#state = Request.RequestState.DONE;
+          this.#state = Request.RequestState.PARSING_BODY;
         }
 
         return charsReadFromHeader;
+      case Request.RequestState.PARSING_BODY:
+        if (!this.headers.has("content-length")) {
+          this.#body = "";
+          this.#state = Request.RequestState.DONE;
+
+          return 0;
+        }
+
+        const contentLength = Number.parseInt(
+          this.headers.get("content-length")
+        );
+
+        if (data.length > contentLength) {
+          throw new InvalidBodyError(
+            "Body length does not match the content-length header"
+          );
+        }
+
+        if (data.length < contentLength) {
+          return 0;
+        }
+
+        this.#body = data;
+        this.#state = Request.RequestState.DONE;
+
+        return data.length;
       case Request.RequestState.DONE:
         throw new Error("Trying to read in done state");
       default:
@@ -187,13 +221,14 @@ export class Request {
           let charsRead;
 
           while (charsRead !== 0) {
+            charsRead = request.parse(buffer.slice(totalCharsRead));
+
+            totalCharsRead += charsRead;
+
             if (request.state === Request.RequestState.DONE) {
               stream.destroy();
               resolve(request);
             }
-
-            charsRead = request.parse(buffer.slice(totalCharsRead));
-            totalCharsRead += charsRead;
           }
         } catch (e) {
           reject(e);

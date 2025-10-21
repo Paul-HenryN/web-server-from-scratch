@@ -13,6 +13,8 @@ tcpServer.on("connection", async (socket) => {
   request.headers.forEach(([key, value]) => {
     console.log(`- ${key}: ${value}`);
   });
+
+  console.log(`Body:\n${JSON.stringify(request.body)}`);
 });
 
 tcpServer.listen(8080);
