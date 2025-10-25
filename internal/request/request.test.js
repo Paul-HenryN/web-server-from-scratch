@@ -29,6 +29,7 @@ export function createChunkedStream(data, chunkSize = 10, delayMs = 5) {
 
       if (chunkSize === -1) {
         this.push(data);
+        this.push(null);
         return;
       }
 
