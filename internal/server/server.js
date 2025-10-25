@@ -1,4 +1,5 @@
 import net from "net";
+import { Response } from "../response/response.js";
 
 export class Server {
   #tcpListener;
@@ -40,19 +41,14 @@ export class Server {
       throw new Error("Server is closed.");
     }
 
-    socket.write(
-      "HTTP/1.1 200 OK\r\n" +
-        "Content-Type: text/plain\r\n" +
-        "Content-Length: 13\r\n" +
-        "\r\n" +
-        "Hello world !",
-      (err) => {
-        if (err) {
-          throw err;
-        }
+    const message = "How are you ??";
 
-        socket.destroy();
-      }
-    );
+    const response = new Response(socket);
+
+    response.writeStatusLine(Response.StatusCode.OK);
+    response.writeHeaders(Response.getDefaultHeaders(message.length));
+    socket.write(message);
+
+    socket.destroy();
   }
 }
