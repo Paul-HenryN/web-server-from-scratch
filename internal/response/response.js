@@ -27,6 +27,21 @@ export class Response {
 
   /**
    *
+   * @param {number} contentLength
+   * @returns {Headers}
+   */
+  static getChunkedEncodingheaders() {
+    const headers = new Headers();
+
+    headers.set("Connection", "close");
+    headers.set("Content-Type", "text/plain");
+    headers.set("transfer-encoding", "chunked");
+
+    return headers;
+  }
+
+  /**
+   *
    * @param {Writable} stream
    */
   constructor(stream) {
@@ -74,6 +89,27 @@ export class Response {
    */
   async writeBody(body) {
     await this.#write(body);
+  }
+
+  /**
+   *
+   * @param {string} chunk
+   * @returns {number}
+   */
+  async writeChunkedBody(chunk) {
+    const chunkSize = Buffer.byteLength(chunk, "utf-8");
+    const chunkSizeHex = chunkSize.toString(16);
+
+    await this.#write(`${chunkSizeHex}\r\n${chunk}\r\n`);
+
+    return chunkSize;
+  }
+
+  /**
+   * @returns {number}
+   */
+  async writeChunkedBodyDone() {
+    this.#write("0\r\n\r\n");
   }
 
   /**

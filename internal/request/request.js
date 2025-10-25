@@ -12,12 +12,12 @@ export class RequestLine {
   static VALID_HTTP_METHODS = ["GET", "POST"];
 
   #httpVersion = "";
-  #requestTarget = "";
+  #target = "";
   #method = "";
 
-  constructor({ httpVersion = "", requestTarget = "", method = "" }) {
+  constructor({ httpVersion = "", target = "", method = "" }) {
     this.#httpVersion = httpVersion;
-    this.#requestTarget = requestTarget;
+    this.#target = target;
     this.#method = method;
   }
 
@@ -53,8 +53,8 @@ export class RequestLine {
     return this.#httpVersion;
   }
 
-  get requestTarget() {
-    return this.#requestTarget;
+  get target() {
+    return this.#target;
   }
 
   get method() {
@@ -90,12 +90,12 @@ export class RequestLine {
     }
 
     const method = RequestLine.validateHttpMethod(parts[0]);
-    const requestTarget = parts[1];
+    const target = parts[1];
     const httpVersionString = RequestLine.validateHttpVersionString(parts[2]);
     const httpVersion = httpVersionString.split("/")[1];
 
     return {
-      requestLine: new RequestLine({ method, requestTarget, httpVersion }),
+      requestLine: new RequestLine({ method, target, httpVersion }),
       charsRead: lineTerminatorIdx + Request.SEPARATOR.length,
     };
   }

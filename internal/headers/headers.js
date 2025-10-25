@@ -144,6 +144,23 @@ export class Headers {
     Object.entries(this.#headersObj).forEach(callbackFn);
   }
 
+  /**
+   *
+   * @param {string} key
+   */
+  remove(key) {
+    delete this.#headersObj[key];
+  }
+
+  /**
+   *
+   * @param {string} key
+   * @param {string} value
+   */
+  replace(key, value) {
+    this.#headersObj[key.toLowerCase()] = value;
+  }
+
   entries() {
     return Object.entries(this.#headersObj);
   }

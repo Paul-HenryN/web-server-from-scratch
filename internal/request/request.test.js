@@ -53,7 +53,7 @@ describe("Request line parsing", () => {
     expect(request).toBeDefined();
     const requestLine = request.requestLine;
     expect(requestLine.method).toBe("GET");
-    expect(requestLine.requestTarget).toBe("/");
+    expect(requestLine.target).toBe("/");
     expect(requestLine.httpVersion).toBe("1.1");
 
     expect(request.state).toBe(Request.RequestState.DONE);
@@ -69,7 +69,7 @@ describe("Request line parsing", () => {
     expect(request).toBeDefined();
     const requestLine = request.requestLine;
     expect(requestLine.method).toBe("GET");
-    expect(requestLine.requestTarget).toBe("/");
+    expect(requestLine.target).toBe("/");
     expect(requestLine.httpVersion).toBe("1.1");
 
     expect(request.state).toBe(Request.RequestState.DONE);
@@ -84,7 +84,7 @@ describe("Request line parsing", () => {
     expect(request).toBeDefined();
     const requestLine = request.requestLine;
     expect(requestLine.method).toBe("POST");
-    expect(requestLine.requestTarget).toBe("/");
+    expect(requestLine.target).toBe("/");
     expect(requestLine.httpVersion).toBe("1.1");
 
     expect(request.state).toBe(Request.RequestState.DONE);
@@ -99,7 +99,7 @@ describe("Request line parsing", () => {
     expect(request).toBeDefined();
     const requestLine = request.requestLine;
     expect(requestLine.method).toBe("GET");
-    expect(requestLine.requestTarget).toBe("/coffee");
+    expect(requestLine.target).toBe("/coffee");
     expect(requestLine.httpVersion).toBe("1.1");
 
     expect(request.state).toBe(Request.RequestState.DONE);
@@ -115,7 +115,7 @@ describe("Request line parsing", () => {
     expect(request).toBeDefined();
     const requestLine = request.requestLine;
     expect(requestLine.method).toBe("POST");
-    expect(requestLine.requestTarget).toBe("/coffee");
+    expect(requestLine.target).toBe("/coffee");
     expect(requestLine.httpVersion).toBe("1.1");
 
     expect(request.state).toBe(Request.RequestState.DONE);

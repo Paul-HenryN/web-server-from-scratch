@@ -4,6 +4,14 @@ import { Server } from "../../internal/server/server.js";
 const port = 8080;
 
 const server = Server.serve(port, async (request, response) => {
+  if (request.requestLine.target.startsWith("/httpbin")) {
+    await chunkedHandler(request, response);
+  } else {
+    await normalHandler(request, response);
+  }
+});
+
+async function normalHandler(request, response) {
   let statusCode = Response.StatusCode.OK;
   let message = `
       <html>
@@ -17,7 +25,7 @@ const server = Server.serve(port, async (request, response) => {
     </html>
   `;
 
-  if (request.requestLine.requestTarget === "/yourproblem") {
+  if (request.requestLine.target === "/yourproblem") {
     statusCode = Response.StatusCode.BAD_REQUEST;
     message = `
       <html>
@@ -32,7 +40,7 @@ const server = Server.serve(port, async (request, response) => {
     `;
   }
 
-  if (request.requestLine.requestTarget === "/myproblem") {
+  if (request.requestLine.target === "/myproblem") {
     statusCode = Response.StatusCode.INTERNAL_SERVER_ERROR;
     message = `
       <html>
@@ -50,6 +58,26 @@ const server = Server.serve(port, async (request, response) => {
   await response.writeStatusLine(statusCode);
   await response.writeHeaders(Response.getDefaultHeaders(message.length));
   await response.writeBody(message);
-});
+}
+
+async function chunkedHandler(request, response) {
+  let statusCode = Response.StatusCode.OK;
+
+  const endpoint = request.requestLine.target.split("/httpbin/")[1];
+  const result = await fetch(`https://httpbin.org/${endpoint}`);
+
+  const headers = Response.getChunkedEncodingheaders();
+  headers.replace("content-type", "application/json");
+
+  response.writeStatusLine(Response.StatusCode.OK);
+  response.writeHeaders(headers);
+
+  for await (const chunk of result.body) {
+    const text = new TextDecoder().decode(chunk);
+    await response.writeChunkedBody(text);
+  }
+
+  await response.writeChunkedBodyDone();
+}
 
 console.log(`Server started on http://localhost:${port}`);
