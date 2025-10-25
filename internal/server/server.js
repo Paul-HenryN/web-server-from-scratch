@@ -3,15 +3,9 @@ import { Request } from "../request/request.js";
 import { Response } from "../response/response.js";
 
 /**
- * @typedef HandlerResponse
- * @property {number} statusCode
- * @property {string} message
- */
-
-/**
  * @callback Handler
  * @param {Request} request
- * @returns {HandlerResponse}
+ * @param {Response} response
  */
 
 export class Server {
@@ -34,10 +28,7 @@ export class Server {
    * @param {number} port
    * @param {Handler} handler
    */
-  static serve(
-    port,
-    handler = () => ({ statusCode: Response.StatusCode.OK, message: "" })
-  ) {
+  static serve(port, handler) {
     const server = new Server(handler);
 
     server.tcpListener.on("connection", server.handleConnection.bind(server));
@@ -73,15 +64,9 @@ export class Server {
 
     try {
       const request = await Request.fromStream(socket);
-      const { statusCode, message } = this.#handler(request);
-
-      await response.writeStatusLine(statusCode);
-      await response.writeHeaders(Response.getDefaultHeaders(message.length));
-      await response.write(message);
+      await this.#handler(request, response);
     } catch (e) {
       console.error("Request handling error:", e);
-      await response.writeStatusLine(Response.StatusCode.INTERNAL_SERVER_ERROR);
-      await response.writeHeaders(Response.getDefaultHeaders(0));
     } finally {
       socket.destroy();
     }

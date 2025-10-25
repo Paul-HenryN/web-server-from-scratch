@@ -54,7 +54,7 @@ export class Response {
         break;
     }
 
-    await this.write(`HTTP/1.1 ${statusCode} ${reasonPhrase}\r\n`);
+    await this.#write(`HTTP/1.1 ${statusCode} ${reasonPhrase}\r\n`);
   }
 
   /**
@@ -63,9 +63,17 @@ export class Response {
    */
   async writeHeaders(headers) {
     for (const [key, value] of headers.entries()) {
-      await this.write(`${key}: ${value}\r\n`);
+      await this.#write(`${key}: ${value}\r\n`);
     }
-    await this.write("\r\n");
+    await this.#write("\r\n");
+  }
+
+  /**
+   *
+   * @param {string} body
+   */
+  async writeBody(body) {
+    await this.#write(body);
   }
 
   /**
@@ -73,7 +81,7 @@ export class Response {
    * @param {string} data
    * @returns {Promise<void>}
    */
-  async write(data) {
+  async #write(data) {
     return new Promise((resolve, reject) => {
       this.#stream.write(data, (err) => {
         if (err) {

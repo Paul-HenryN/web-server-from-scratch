@@ -2,10 +2,10 @@
   "name": "web-server-from-scratch",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "./cmd/http-server/index.js",
   "type": "module",
   "scripts": {
-    "dev": "node index.js",
+    "dev": "node ./cmd/http-server/index.js",
     "test": "vitest"
   },
   "keywords": [],
