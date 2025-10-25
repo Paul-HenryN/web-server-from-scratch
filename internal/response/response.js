@@ -37,7 +37,7 @@ export class Response {
    *
    * @param {number} statusCode
    */
-  writeStatusLine(statusCode) {
+  async writeStatusLine(statusCode) {
     let reasonPhrase = "";
 
     switch (statusCode) {
@@ -45,27 +45,43 @@ export class Response {
         reasonPhrase = "OK";
         break;
       case Response.StatusCode.BAD_REQUEST:
-        reasonPhrase = "Bad request";
+        reasonPhrase = "Bad Request";
         break;
-      case Response.StatusCode.OK:
+      case Response.StatusCode.INTERNAL_SERVER_ERROR:
         reasonPhrase = "Internal Server Error";
         break;
       default:
         break;
     }
 
-    this.#stream.write(`HTTP/1.1 ${statusCode} ${reasonPhrase}\r\n`);
+    await this.write(`HTTP/1.1 ${statusCode} ${reasonPhrase}\r\n`);
   }
 
   /**
    *
    * @param {Headers} headers
    */
-  writeHeaders(headers) {
-    headers.forEach(([key, value]) => {
-      this.#stream.write(`${key}: ${value}\r\n`);
-    });
+  async writeHeaders(headers) {
+    for (const [key, value] of headers.entries()) {
+      await this.write(`${key}: ${value}\r\n`);
+    }
+    await this.write("\r\n");
+  }
 
-    this.#stream.write("\r\n");
+  /**
+   *
+   * @param {string} data
+   * @returns {Promise<void>}
+   */
+  async write(data) {
+    return new Promise((resolve, reject) => {
+      this.#stream.write(data, (err) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve();
+        }
+      });
+    });
   }
 }

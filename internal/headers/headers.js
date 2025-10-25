@@ -143,4 +143,8 @@ export class Headers {
   forEach(callbackFn) {
     Object.entries(this.#headersObj).forEach(callbackFn);
   }
+
+  entries() {
+    return Object.entries(this.#headersObj);
+  }
 }

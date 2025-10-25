@@ -226,7 +226,6 @@ export class Request {
             totalCharsRead += charsRead;
 
             if (request.state === Request.RequestState.DONE) {
-              stream.destroy();
               resolve(request);
             }
           }
