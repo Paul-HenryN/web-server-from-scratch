@@ -3,19 +3,38 @@ import { Headers } from "../headers/headers.js";
 
 export class Response {
   #stream;
+  #statusCode;
 
   static StatusCode = Object.freeze({
     OK: 200,
     BAD_REQUEST: 400,
     INTERNAL_SERVER_ERROR: 500,
+    NOT_FOUND: 404,
   });
+
+  /**
+   *
+   * @param {Writable} stream
+   */
+  constructor(stream) {
+    this.#stream = stream;
+    this.#statusCode = Response.StatusCode.OK;
+  }
+
+  /**
+   * @param {number} statusCode
+   */
+  status(statusCode) {
+    this.#statusCode = statusCode;
+    return this;
+  }
 
   /**
    *
    * @param {number} contentLength
    * @returns {Headers}
    */
-  static getDefaultHeaders(contentLength) {
+  static #getDefaultHeaders(contentLength) {
     const headers = new Headers();
 
     headers.set("Content-Length", contentLength.toString());
@@ -27,32 +46,31 @@ export class Response {
 
   /**
    *
-   * @param {number} contentLength
-   * @returns {Headers}
+   * @param {string} data
    */
-  static getChunkedEncodingheaders() {
-    const headers = new Headers();
+  async text(data) {
+    const headers = Response.#getDefaultHeaders(Buffer.byteLength(data));
+    headers.replace("Content-Type", "text/plain");
 
-    headers.set("Connection", "close");
-    headers.set("Content-Type", "text/plain");
-    headers.set("Transfer-Encoding", "chunked");
-
-    return headers;
+    await this.#send(headers, data);
   }
 
   /**
    *
-   * @param {Writable} stream
+   * @param {string} data
    */
-  constructor(stream) {
-    this.#stream = stream;
+  async html(data) {
+    const headers = Response.#getDefaultHeaders(Buffer.byteLength(data));
+    headers.replace("Content-Type", "text/html");
+
+    await this.#send(headers, data);
   }
 
   /**
    *
    * @param {number} statusCode
    */
-  async writeStatusLine(statusCode) {
+  async #writeStatusLine(statusCode) {
     let reasonPhrase = "";
 
     switch (statusCode) {
@@ -65,6 +83,9 @@ export class Response {
       case Response.StatusCode.INTERNAL_SERVER_ERROR:
         reasonPhrase = "Internal Server Error";
         break;
+      case Response.StatusCode.NOT_FOUND:
+        reasonPhrase = "Not Found";
+        break;
       default:
         break;
     }
@@ -76,7 +97,7 @@ export class Response {
    *
    * @param {Headers} headers
    */
-  async writeHeaders(headers) {
+  async #writeHeaders(headers) {
     for (const [key, value] of headers.entries()) {
       await this.#write(`${key}: ${value}\r\n`);
     }
@@ -87,8 +108,19 @@ export class Response {
    *
    * @param {string} body
    */
-  async writeBody(body) {
+  async #writeBody(body) {
     await this.#write(body);
+  }
+
+  /**
+   *
+   * @param {Headers} headers
+   * @param {*} body
+   */
+  async #send(headers, body) {
+    await this.#writeStatusLine(this.#statusCode);
+    await this.#writeHeaders(headers);
+    await this.#writeBody(body);
   }
 
   /**
@@ -96,7 +128,7 @@ export class Response {
    * @param {string} chunk
    * @returns {number}
    */
-  async writeChunkedBody(chunk) {
+  async #writeChunkedBody(chunk) {
     const chunkSize = Buffer.byteLength(chunk, "utf-8");
     const chunkSizeHex = chunkSize.toString(16);
 
@@ -108,7 +140,7 @@ export class Response {
   /**
    * @returns {number}
    */
-  async writeChunkedBodyDone() {
+  async #writeChunkedBodyDone() {
     this.#write("0\r\n\r\n");
   }
 
@@ -116,7 +148,7 @@ export class Response {
    *
    * @param {Headers} trailers
    */
-  async writeTrailers(trailers) {
+  async #writeTrailers(trailers) {
     for (const [key, value] of trailers.entries()) {
       await this.#write(`${key}: ${value}\r\n`);
     }
