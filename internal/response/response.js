@@ -86,27 +86,29 @@ export class Response {
    *
    * @param {Readable} readableStream
    */
-  async stream(readableStream) {
+  async stream(readableStream, contentType = "text/plain") {
     const headers = Response.#getDefaultStreamingheaders();
     headers.set("Trailer", "X-Content-SHA256, X-Content-Length");
+    headers.replace("Content-Type", contentType);
 
     await this.#writeStatusLine(this.#statusCode);
     await this.#writeHeaders(headers);
 
-    let buffer = "";
+    const chunks = [];
     const hash = crypto.createHash("sha256");
 
     for await (const chunk of readableStream) {
-      const text = new TextDecoder().decode(chunk);
-      buffer += text;
-      hash.update(text);
-      await this.#writeChunkedBody(text);
+      hash.update(chunk);
+      await this.#writeChunkedBody(chunk);
+      chunks.push(chunk);
     }
     await this.#writeChunkedBodyDone();
 
+    const buffer = Buffer.concat(chunks);
+
     const trailers = new Headers();
     trailers.set("X-Content-SHA256", hash.digest("hex"));
-    trailers.set("X-Content-Length", Buffer.byteLength(buffer).toString());
+    trailers.set("X-Content-Length", buffer.length.toString());
     await this.#writeTrailers(trailers);
   }
 
@@ -150,7 +152,7 @@ export class Response {
 
   /**
    *
-   * @param {string} body
+   * @param {Buffer} body
    */
   async #writeBody(body) {
     await this.#write(body);
@@ -159,7 +161,7 @@ export class Response {
   /**
    *
    * @param {Headers} headers
-   * @param {*} body
+   * @param {Buffer} body
    */
   async #send(headers, body) {
     await this.#writeStatusLine(this.#statusCode);
@@ -169,23 +171,24 @@ export class Response {
 
   /**
    *
-   * @param {string} chunk
+   * @param {Buffer} chunk
    * @returns {Promise<number>}
    */
   async #writeChunkedBody(chunk) {
-    const chunkSize = Buffer.byteLength(chunk, "utf-8");
-    const chunkSizeHex = chunkSize.toString(16);
+    const chunkSizeHex = chunk.length.toString(16);
 
-    await this.#write(`${chunkSizeHex}\r\n${chunk}\r\n`);
+    await this.#write(`${chunkSizeHex}\r\n`);
+    await this.#write(chunk);
+    await this.#write("\r\n");
 
-    return chunkSize;
+    return chunk.length;
   }
 
   /**
    * @returns {Promise<void>}
    */
   async #writeChunkedBodyDone() {
-    this.#write("0\r\n\r\n");
+    await this.#write("0\r\n\r\n");
   }
 
   /**
@@ -202,7 +205,7 @@ export class Response {
 
   /**
    *
-   * @param {string} data
+   * @param {Buffer} data
    * @returns {Promise<void>}
    */
   async #write(data) {
