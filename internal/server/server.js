@@ -100,19 +100,11 @@ export class Server {
       if (e.code === "EPIPE") {
         console.log("Client disconnected");
       } else {
-        response.status(Response.StatusCode.INTERNAL_SERVER_ERROR).html(
-          `
-            <html>
-              <head>
-                <title>NOT FOUND</title>
-              </head>
+        console.error(e);
 
-              <body>
-                INTERNAL SERVER ERROR
-              </body>
-            </html>
-          `
-        );
+        response
+          .status(Response.StatusCode.INTERNAL_SERVER_ERROR)
+          .text("Something went wrong");
       }
     } finally {
       socket.destroy();

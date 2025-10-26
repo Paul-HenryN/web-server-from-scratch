@@ -1,5 +1,6 @@
-import { Writable } from "stream";
+import { Readable, Writable } from "stream";
 import { Headers } from "../headers/headers.js";
+import crypto from "crypto";
 
 export class Response {
   #stream;
@@ -46,6 +47,21 @@ export class Response {
 
   /**
    *
+   * @param {number} contentLength
+   * @returns {Headers}
+   */
+  static #getDefaultStreamingheaders() {
+    const headers = new Headers();
+
+    headers.set("Transfer-Encoding", "chunked");
+    headers.set("Connection", "close");
+    headers.set("Content-Type", "text/plain");
+
+    return headers;
+  }
+
+  /**
+   *
    * @param {string} data
    */
   async text(data) {
@@ -64,6 +80,34 @@ export class Response {
     headers.replace("Content-Type", "text/html");
 
     await this.#send(headers, data);
+  }
+
+  /**
+   *
+   * @param {Readable} readableStream
+   */
+  async stream(readableStream) {
+    const headers = Response.#getDefaultStreamingheaders();
+    headers.set("Trailer", "X-Content-SHA256, X-Content-Length");
+
+    await this.#writeStatusLine(this.#statusCode);
+    await this.#writeHeaders(headers);
+
+    let buffer = "";
+    const hash = crypto.createHash("sha256");
+
+    for await (const chunk of readableStream) {
+      const text = new TextDecoder().decode(chunk);
+      buffer += text;
+      hash.update(text);
+      await this.#writeChunkedBody(text);
+    }
+    await this.#writeChunkedBodyDone();
+
+    const trailers = new Headers();
+    trailers.set("X-Content-SHA256", hash.digest("hex"));
+    trailers.set("X-Content-Length", Buffer.byteLength(buffer).toString());
+    await this.#writeTrailers(trailers);
   }
 
   /**
@@ -126,7 +170,7 @@ export class Response {
   /**
    *
    * @param {string} chunk
-   * @returns {number}
+   * @returns {Promise<number>}
    */
   async #writeChunkedBody(chunk) {
     const chunkSize = Buffer.byteLength(chunk, "utf-8");
@@ -138,7 +182,7 @@ export class Response {
   }
 
   /**
-   * @returns {number}
+   * @returns {Promise<void>}
    */
   async #writeChunkedBodyDone() {
     this.#write("0\r\n\r\n");
