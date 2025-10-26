@@ -149,7 +149,7 @@ export class Headers {
    * @param {string} key
    */
   remove(key) {
-    delete this.#headersObj[key];
+    delete this.#headersObj[key.toLowerCase()];
   }
 
   /**

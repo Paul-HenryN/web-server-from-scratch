@@ -35,7 +35,7 @@ export class Response {
 
     headers.set("Connection", "close");
     headers.set("Content-Type", "text/plain");
-    headers.set("transfer-encoding", "chunked");
+    headers.set("Transfer-Encoding", "chunked");
 
     return headers;
   }
@@ -114,11 +114,29 @@ export class Response {
 
   /**
    *
+   * @param {Headers} trailers
+   */
+  async writeTrailers(trailers) {
+    for (const [key, value] of trailers.entries()) {
+      await this.#write(`${key}: ${value}\r\n`);
+    }
+
+    await this.#write("\r\n");
+  }
+
+  /**
+   *
    * @param {string} data
    * @returns {Promise<void>}
    */
   async #write(data) {
     return new Promise((resolve, reject) => {
+      if (this.#stream.destroyed || !this.#stream.writable) {
+        // Socket already closed, silently fail
+        resolve();
+        return;
+      }
+
       this.#stream.write(data, (err) => {
         if (err) {
           reject(err);

@@ -66,7 +66,11 @@ export class Server {
       const request = await Request.fromStream(socket);
       await this.#handler(request, response);
     } catch (e) {
-      console.error("Request handling error:", e);
+      if (e.code === "EPIPE") {
+        console.log("Client disconnected");
+      } else {
+        console.error(e.message);
+      }
     } finally {
       socket.destroy();
     }
